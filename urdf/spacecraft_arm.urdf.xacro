@@ -1,0 +1,144 @@
+<?xml version="1.0"?>
+<robot name="spacecraft_arm" xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <xacro:arg name="controllers_file" default="$(find spacecraft_reaction_sim)/config/arm_controllers.yaml"/>
+  <xacro:macro name="box_x_link" params="name mass length width height rgba">
+    <link name="${name}">
+      <inertial>
+        <origin xyz="${length / 2.0} 0 0" rpy="0 0 0"/>
+        <mass value="${mass}"/>
+        <inertia ixx="${mass / 12.0 * (width * width + height * height)}"
+                 ixy="0" ixz="0"
+                 iyy="${mass / 12.0 * (length * length + height * height)}"
+                 iyz="0"
+                 izz="${mass / 12.0 * (length * length + width * width)}"/>
+      </inertial>
+      <visual>
+        <origin xyz="${length / 2.0} 0 0" rpy="0 0 0"/>
+        <geometry><box size="${length} ${width} ${height}"/></geometry>
+        <material name="${name}_color"><color rgba="${rgba}"/></material>
+      </visual>
+      <collision>
+        <origin xyz="${length / 2.0} 0 0" rpy="0 0 0"/>
+        <geometry><box size="${length} ${width} ${height}"/></geometry>
+      </collision>
+    </link>
+  </xacro:macro>
+
+  <xacro:macro name="box_z_link" params="name mass length width height rgba">
+    <link name="${name}">
+      <inertial>
+        <origin xyz="0 0 ${length / 2.0}" rpy="0 0 0"/>
+        <mass value="${mass}"/>
+        <inertia ixx="${mass / 12.0 * (width * width + length * length)}"
+                 ixy="0" ixz="0"
+                 iyy="${mass / 12.0 * (height * height + length * length)}"
+                 iyz="0"
+                 izz="${mass / 12.0 * (width * width + height * height)}"/>
+      </inertial>
+      <visual>
+        <origin xyz="0 0 ${length / 2.0}" rpy="0 0 0"/>
+        <geometry><box size="${width} ${height} ${length}"/></geometry>
+        <material name="${name}_color"><color rgba="${rgba}"/></material>
+      </visual>
+      <collision>
+        <origin xyz="0 0 ${length / 2.0}" rpy="0 0 0"/>
+        <geometry><box size="${width} ${height} ${length}"/></geometry>
+      </collision>
+    </link>
+  </xacro:macro>
+
+  <xacro:macro name="reaction_wheel" params="name rgba">
+    <link name="${name}">
+      <inertial><mass value="4.0"/><inertia ixx="0.034533" ixy="0" ixz="0" iyy="0.034533" iyz="0" izz="0.064"/></inertial>
+      <visual><geometry><cylinder radius="0.18" length="0.08"/></geometry><material name="${name}_color"><color rgba="${rgba}"/></material></visual>
+      <!-- Visual-only radial pointer: it makes wheel rotation unambiguous in Gazebo. -->
+      <visual><origin xyz="0.07 0 0" rpy="0 0 0"/><geometry><box size="0.24 0.045 0.10"/></geometry><material name="${name}_marker"><color rgba="1 0.75 0.05 1"/></material></visual>
+      <visual><origin xyz="0.19 0 0" rpy="0 0 0"/><geometry><sphere radius="0.045"/></geometry><material name="${name}_marker_tip"><color rgba="1 1 1 1"/></material></visual>
+      <collision><geometry><cylinder radius="0.18" length="0.08"/></geometry></collision>
+    </link>
+  </xacro:macro>
+
+  <link name="spacecraft_base">
+    <inertial>
+      <mass value="400.0"/>
+      <inertia ixx="81.333333" ixy="0" ixz="0" iyy="108.333333" iyz="0" izz="123.0"/>
+    </inertial>
+    <visual>
+      <geometry><box size="1.5 1.2 1.0"/></geometry>
+      <material name="base_white"><color rgba="0.75 0.75 0.8 1"/></material>
+    </visual>
+    <collision><geometry><box size="1.5 1.2 1.0"/></geometry></collision>
+  </link>
+
+  <xacro:box_z_link name="arm_link_1" mass="8.0" length="0.35" width="0.12" height="0.12" rgba="0.15 0.55 0.95 1"/>
+  <xacro:box_x_link name="arm_link_2" mass="7.0" length="0.60" width="0.12" height="0.12" rgba="0.15 0.75 0.75 1"/>
+  <xacro:box_x_link name="arm_link_3" mass="6.0" length="0.50" width="0.10" height="0.10" rgba="0.25 0.85 0.45 1"/>
+  <xacro:box_x_link name="arm_link_4" mass="5.0" length="0.40" width="0.10" height="0.10" rgba="0.95 0.65 0.15 1"/>
+  <xacro:box_x_link name="arm_link_5" mass="4.0" length="0.30" width="0.08" height="0.08" rgba="0.95 0.35 0.15 1"/>
+  <xacro:reaction_wheel name="reaction_wheel_x" rgba="0.9 0.15 0.15 1"/>
+  <xacro:reaction_wheel name="reaction_wheel_y" rgba="0.15 0.9 0.25 1"/>
+  <xacro:reaction_wheel name="reaction_wheel_z" rgba="0.2 0.35 0.95 1"/>
+
+  <link name="arm_wrist">
+    <inertial>
+      <mass value="12.0"/>
+      <inertia ixx="0.20" ixy="0" ixz="0" iyy="0.20" iyz="0" izz="0.389"/>
+    </inertial>
+    <visual>
+      <geometry><cylinder radius="0.18" length="0.15"/></geometry>
+      <material name="wrist_blue"><color rgba="0.1 0.25 0.8 1"/></material>
+    </visual>
+    <visual>
+      <origin xyz="0.19 0 0" rpy="0 0 0"/>
+      <geometry><box size="0.16 0.06 0.10"/></geometry>
+      <material name="wrist_marker_orange"><color rgba="1 0.28 0.02 1"/></material>
+    </visual>
+    <!-- Visual-only radial flag: it deliberately amplifies joint-6 roll motion. -->
+    <visual>
+      <origin xyz="0.43 0 0" rpy="0 0 0"/>
+      <geometry><box size="0.50 0.08 0.035"/></geometry>
+      <material name="wrist_roll_flag"><color rgba="1 0.9 0.02 1"/></material>
+    </visual>
+    <visual>
+      <origin xyz="0.70 0 0" rpy="0 0 0"/>
+      <geometry><sphere radius="0.06"/></geometry>
+      <material name="wrist_roll_tip"><color rgba="1 0.05 0.05 1"/></material>
+    </visual>
+    <collision><geometry><cylinder radius="0.18" length="0.15"/></geometry></collision>
+  </link>
+
+  <joint name="arm_joint_1" type="revolute"><parent link="spacecraft_base"/><child link="arm_link_1"/><origin xyz="0 0 0.65" rpy="0 0 0"/><axis xyz="0 0 1"/><dynamics damping="0" friction="0"/><limit lower="-2.967" upper="2.967" effort="30" velocity="3"/></joint>
+  <joint name="arm_joint_2" type="revolute"><parent link="arm_link_1"/><child link="arm_link_2"/><origin xyz="0 0 0.35" rpy="0 0 0"/><axis xyz="0 1 0"/><dynamics damping="0" friction="0"/><limit lower="-1.745" upper="1.745" effort="30" velocity="3"/></joint>
+  <joint name="arm_joint_3" type="revolute"><parent link="arm_link_2"/><child link="arm_link_3"/><origin xyz="0.60 0 0" rpy="0 0 0"/><axis xyz="0 1 0"/><dynamics damping="0" friction="0"/><limit lower="-2.268" upper="2.268" effort="25" velocity="3"/></joint>
+  <joint name="arm_joint_4" type="revolute"><parent link="arm_link_3"/><child link="arm_link_4"/><origin xyz="0.50 0 0" rpy="0 0 0"/><axis xyz="1 0 0"/><dynamics damping="0" friction="0"/><limit lower="-3.142" upper="3.142" effort="20" velocity="4"/></joint>
+  <joint name="arm_joint_5" type="revolute"><parent link="arm_link_4"/><child link="arm_link_5"/><origin xyz="0.40 0 0" rpy="0 0 0"/><axis xyz="0 1 0"/><dynamics damping="0" friction="0"/><limit lower="-2.094" upper="2.094" effort="15" velocity="4"/></joint>
+  <!-- Joint 6 rolls about the final arm direction (body x), perpendicular to joint 5 (body y). -->
+  <joint name="arm_joint_6" type="revolute"><parent link="arm_link_5"/><child link="arm_wrist"/><origin xyz="0.30 0 0" rpy="0 1.570796 0"/><axis xyz="0 0 1"/><dynamics damping="0" friction="0"/><limit lower="-3.142" upper="3.142" effort="10" velocity="4"/></joint>
+  <joint name="wheel_joint_x" type="continuous"><parent link="spacecraft_base"/><child link="reaction_wheel_x"/><origin xyz="-0.82 0 0" rpy="0 1.570796 0"/><axis xyz="0 0 1"/><dynamics damping="0" friction="0"/><limit effort="2" velocity="200"/></joint>
+  <joint name="wheel_joint_y" type="continuous"><parent link="spacecraft_base"/><child link="reaction_wheel_y"/><origin xyz="0 -0.67 0" rpy="-1.570796 0 0"/><axis xyz="0 0 1"/><dynamics damping="0" friction="0"/><limit effort="2" velocity="200"/></joint>
+  <joint name="wheel_joint_z" type="continuous"><parent link="spacecraft_base"/><child link="reaction_wheel_z"/><origin xyz="0 0 -0.57" rpy="0 0 0"/><axis xyz="0 0 1"/><dynamics damping="0" friction="0"/><limit effort="2" velocity="200"/></joint>
+
+  <ros2_control name="GazeboSimSystem" type="system">
+    <hardware><plugin>gz_ros2_control/GazeboSimSystem</plugin></hardware>
+    <xacro:macro name="effort_joint" params="name limit">
+      <joint name="${name}">
+        <command_interface name="effort"><param name="min">-${limit}</param><param name="max">${limit}</param></command_interface>
+        <state_interface name="position"/><state_interface name="velocity"/><state_interface name="effort"/>
+      </joint>
+    </xacro:macro>
+    <xacro:effort_joint name="arm_joint_1" limit="30"/>
+    <xacro:effort_joint name="arm_joint_2" limit="30"/>
+    <xacro:effort_joint name="arm_joint_3" limit="25"/>
+    <xacro:effort_joint name="arm_joint_4" limit="20"/>
+    <xacro:effort_joint name="arm_joint_5" limit="15"/>
+    <xacro:effort_joint name="arm_joint_6" limit="10"/>
+    <xacro:effort_joint name="wheel_joint_x" limit="2"/>
+    <xacro:effort_joint name="wheel_joint_y" limit="2"/>
+    <xacro:effort_joint name="wheel_joint_z" limit="2"/>
+  </ros2_control>
+
+  <gazebo>
+    <plugin filename="gz-sim-odometry-publisher-system" name="gz::sim::systems::OdometryPublisher"><dimensions>3</dimensions><odom_publish_frequency>100</odom_publish_frequency></plugin>
+    <plugin filename="libgz_ros2_control-system.so" name="gz_ros2_control::GazeboSimROS2ControlPlugin"><parameters>$(arg controllers_file)</parameters><hold_joints>false</hold_joints></plugin>
+  </gazebo>
+</robot>

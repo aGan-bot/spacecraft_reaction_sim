@@ -1,0 +1,28 @@
+controller_manager:
+  ros__parameters:
+    update_rate: 1000
+    arm_joint_state_broadcaster:
+      type: joint_state_broadcaster/JointStateBroadcaster
+    arm_effort_controller:
+      type: forward_command_controller/ForwardCommandController
+    reaction_wheel_effort_controller:
+      type: forward_command_controller/ForwardCommandController
+
+arm_effort_controller:
+  ros__parameters:
+    joints:
+      - arm_joint_1
+      - arm_joint_2
+      - arm_joint_3
+      - arm_joint_4
+      - arm_joint_5
+      - arm_joint_6
+    interface_name: effort
+
+reaction_wheel_effort_controller:
+  ros__parameters:
+    joints:
+      - wheel_joint_x
+      - wheel_joint_y
+      - wheel_joint_z
+    interface_name: effort
