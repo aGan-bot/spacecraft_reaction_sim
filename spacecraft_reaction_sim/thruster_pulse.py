@@ -75,7 +75,7 @@ def main(args=None):
     rclpy.init(args=args)
     node = ThrusterPulse()
     try:
-        while rclpy.ok() and not node.complete:
+        while rclpy.ok() and not node.complete():
             rclpy.spin_once(node, timeout_sec=0.1)
     except KeyboardInterrupt:
         pass
