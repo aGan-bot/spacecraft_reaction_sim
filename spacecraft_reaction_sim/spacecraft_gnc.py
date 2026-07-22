@@ -86,9 +86,9 @@ class SpacecraftGnc(Node):
         self.declare_parameter('mass_kg', 400.0)
         self.declare_parameter('position_kp', 0.02)
         self.declare_parameter('position_kd', 0.18)
-        self.declare_parameter('attitude_kp', 0.4)
-        self.declare_parameter('attitude_kd', 1.0)
-        self.declare_parameter('max_wheel_torque', 0.5)
+        self.declare_parameter('attitude_kp', 1.2)
+        self.declare_parameter('attitude_kd', 2.0)
+        self.declare_parameter('max_wheel_torque', 1.5)
         self.declare_parameter('enable_desaturation', True)
         self.declare_parameter('desaturation_start_speed', 314.159)
         self.declare_parameter('desaturation_release_speed', 261.799)
@@ -140,6 +140,11 @@ class SpacecraftGnc(Node):
     def _validate(self):
         if self._mass <= 0.0:
             raise ValueError('mass_kg must be positive.')
+        if (self._position_kp <= 0.0 or self._position_kd <= 0.0 or
+                self._attitude_kp <= 0.0 or self._attitude_kd <= 0.0):
+            raise ValueError('Controller gains must be positive.')
+        if self._max_wheel_torque <= 0.0:
+            raise ValueError('max_wheel_torque must be positive.')
         if self._desaturation_release_speed >= self._desaturation_start_speed:
             raise ValueError('Desaturation release speed must be below start speed.')
         if self._desaturation_torque <= 0.0:
@@ -238,6 +243,13 @@ class SpacecraftGnc(Node):
 
     def _parameter_callback(self, parameters):
         values = {
+            'mass_kg': self._mass,
+            'position_kp': self._position_kp,
+            'position_kd': self._position_kd,
+            'attitude_kp': self._attitude_kp,
+            'attitude_kd': self._attitude_kd,
+            'max_wheel_torque': self._max_wheel_torque,
+            'enable_desaturation': self._desaturation_enabled,
             'desaturation_start_speed': self._desaturation_start_speed,
             'desaturation_release_speed': self._desaturation_release_speed,
             'desaturation_torque': self._desaturation_torque,
@@ -247,6 +259,12 @@ class SpacecraftGnc(Node):
         for parameter in parameters:
             if parameter.name in values:
                 values[parameter.name] = parameter.value
+        if (values['mass_kg'] <= 0.0 or values['position_kp'] <= 0.0 or
+                values['position_kd'] <= 0.0 or values['attitude_kp'] <= 0.0 or
+                values['attitude_kd'] <= 0.0 or
+                values['max_wheel_torque'] <= 0.0):
+            return SetParametersResult(
+                successful=False, reason='Mass, gains and wheel torque must be positive.')
         if values['desaturation_release_speed'] >= values['desaturation_start_speed']:
             return SetParametersResult(
                 successful=False, reason='Release speed must be below start speed.')
@@ -256,6 +274,13 @@ class SpacecraftGnc(Node):
         if values['rcs_force_weight'] <= 0.0 or values['rcs_torque_weight'] <= 0.0:
             return SetParametersResult(
                 successful=False, reason='RCS allocation weights must be positive.')
+        self._mass = values['mass_kg']
+        self._position_kp = values['position_kp']
+        self._position_kd = values['position_kd']
+        self._attitude_kp = values['attitude_kp']
+        self._attitude_kd = values['attitude_kd']
+        self._max_wheel_torque = values['max_wheel_torque']
+        self._desaturation_enabled = values['enable_desaturation']
         self._desaturation_start_speed = values['desaturation_start_speed']
         self._desaturation_release_speed = values['desaturation_release_speed']
         self._desaturation_torque = values['desaturation_torque']
@@ -273,7 +298,8 @@ def main(args=None):
         pass
     finally:
         node.destroy_node()
-        rclpy.shutdown()
+        if rclpy.ok():
+            rclpy.shutdown()
 
 
 if __name__ == '__main__':

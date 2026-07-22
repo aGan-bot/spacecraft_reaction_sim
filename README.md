@@ -201,6 +201,24 @@ odometry pose as its position-and-attitude hold target. It is the only command
 publisher for reaction wheels and RCS in this launch; do not run
 `attitude_hold` or `thruster_pulse` alongside it.
 
+The initial attitude tuning uses `attitude_kp:=1.2`, `attitude_kd:=2.0` and a
+`1.5 N m` wheel-torque cap. These remain below the modelled `2 N m` wheel joint
+limit. Try a lower or higher cap without rebuilding:
+
+```bash
+ros2 launch spacecraft_reaction_sim spacecraft_arm_gnc.launch.py \
+  max_wheel_torque:=1.0 attitude_kp:=0.8 attitude_kd:=1.5
+```
+
+During a run, tuning is also dynamic. Change one value at a time and observe
+odometry before increasing it further:
+
+```bash
+ros2 param set /spacecraft_gnc max_wheel_torque 1.5
+ros2 param set /spacecraft_gnc attitude_kp 1.2
+ros2 param set /spacecraft_gnc attitude_kd 2.0
+```
+
 Send a deliberately small position target first. The model spawns at `z=2`,
 so this moves it 0.2 m in world X while keeping the identity orientation:
 
