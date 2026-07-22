@@ -189,6 +189,35 @@ Gazebo built-in `SpacecraftThrusterModel` applies the force using a 20 Hz PWM
 duty-cycle command; the command returns to zero and the one-shot node exits
 automatically at the end of the pulse.
 
+### 7. Closed-loop spacecraft pose GNC
+
+```bash
+ros2 launch spacecraft_reaction_sim spacecraft_arm_gnc.launch.py
+```
+
+This is the first closed-loop spacecraft guidance experiment. After Gazebo and
+the controllers start, `spacecraft_gnc` starts at 10 s and captures the first
+odometry pose as its position-and-attitude hold target. It is the only command
+publisher for reaction wheels and RCS in this launch; do not run
+`attitude_hold` or `thruster_pulse` alongside it.
+
+Send a deliberately small position target first. The model spawns at `z=2`,
+so this moves it 0.2 m in world X while keeping the identity orientation:
+
+```bash
+ros2 topic pub --once /spacecraft_arm/guidance/target_pose \
+  geometry_msgs/msg/PoseStamped \
+  "{header: {frame_id: 'world'}, pose: {position: {x: 0.2, y: 0.0, z: 2.0}, orientation: {x: 0.0, y: 0.0, z: 0.0, w: 1.0}}}"
+```
+
+The node transforms the world-frame position request into the body frame for
+RCS allocation. Reaction wheels handle routine attitude correction; when a
+wheel reaches the 3000 rpm desaturation threshold, the node brakes it and
+requests the corresponding external RCS torque while continuing pose hold.
+The current six single-direction nozzles cannot instantaneously produce every
+six-axis wrench, so a desaturation manoeuvre can include controlled
+translation. See [`docs/GNC_PLAN.md`](docs/GNC_PLAN.md) for the staged plan.
+
 ## Monitoring and plots
 
 Confirm controller state:
@@ -223,9 +252,9 @@ Connect Foxglove to `ws://localhost:8765`. A useful layout has a 3D panel, a con
 
 ## Current limitations and next steps
 
-- Attitude hold uses a small-angle PD controller and holds the initial attitude; it does not yet accept a world-frame attitude target.
+- `spacecraft_gnc` accepts a world-frame spacecraft pose target and combines position RCS control, reaction-wheel attitude control, and wheel desaturation. Its initial tuning is intentionally conservative and requires Gazebo validation before combining it with JTC.
 - Three-axis reaction-wheel desaturation, a three-corner six-nozzle RCS layout, and bounded wrench allocation are implemented. Saturation is software-managed because effort-controlled Gazebo joints do not enforce URDF velocity limits.
-- JTC controls joint trajectories only. Holding the end effector fixed in the world frame while changing spacecraft attitude requires a future floating-base task-space or inverse-kinematics controller.
+- JTC controls joint trajectories only. The next integration stage is to let GNC counter JTC disturbances without both nodes publishing the same wheel or RCS topics. Holding the end effector fixed in the world frame while changing spacecraft attitude then requires a floating-base task-space or inverse-kinematics controller.
 - Geometry and inertial values are simplified for control experiments and are not a flight-qualified spacecraft model.
 
 ## Test

@@ -26,6 +26,11 @@ install(
   DESTINATION lib/${PROJECT_NAME}
   RENAME thruster_pulse
 )
+install(
+  PROGRAMS spacecraft_reaction_sim/spacecraft_gnc.py
+  DESTINATION lib/${PROJECT_NAME}
+  RENAME spacecraft_gnc
+)
 
 install(
   DIRECTORY config launch urdf worlds
@@ -39,6 +44,7 @@ if(BUILD_TESTING)
   ament_add_pytest_test(arm_position_hold_test test/test_arm_position_hold.py)
   ament_add_pytest_test(thruster_pulse_test test/test_thruster_pulse.py)
   ament_add_pytest_test(wrench_allocator_test test/test_wrench_allocator.py)
+  ament_add_pytest_test(spacecraft_gnc_test test/test_spacecraft_gnc.py)
 endif()
 
 ament_package()
