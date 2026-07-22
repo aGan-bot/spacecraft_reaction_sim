@@ -7,6 +7,7 @@ import rclpy
 from actuator_msgs.msg import Actuators
 from nav_msgs.msg import Odometry
 from rclpy.node import Node
+from rcl_interfaces.msg import SetParametersResult
 from sensor_msgs.msg import JointState
 from std_msgs.msg import Float64MultiArray
 
@@ -74,6 +75,7 @@ class AttitudeHold(Node):
             raise ValueError('Desaturation release speed must be lower than start speed.')
         if self._desaturation_torque <= 0.0:
             raise ValueError('Desaturation torques must be positive.')
+        self.add_on_set_parameters_callback(self._parameter_callback)
         self._reference_rpy = None
         self._orientation = None
         self._angular_velocity = None
@@ -136,8 +138,35 @@ class AttitudeHold(Node):
                     rcs_command = [max(old, new) for old, new in zip(rcs_command, command)]
             if was_active != self._desaturation_active[axis_index]:
                 state = "started" if self._desaturation_active[axis_index] else "finished"
-                self.get_logger().info("%s-wheel momentum desaturation %s." % (axis.upper(), state))
+                active_duty = max(rcs_command) if active else 0.0
+                self.get_logger().info(
+                    "%s-wheel momentum desaturation %s "
+                    "(wheel=%.3f rad/s, RCS duty=%.3f)." % (
+                        axis.upper(), state, wheel_velocity, active_duty))
         self._rcs_publisher.publish(Actuators(normalized=rcs_command))
+
+    def _parameter_callback(self, parameters):
+        """Allow desaturation thresholds to be tuned without restarting Gazebo."""
+        values = {
+            "desaturation_start_speed": self._desaturation_start_speed,
+            "desaturation_release_speed": self._desaturation_release_speed,
+            "desaturation_torque": self._desaturation_torque,
+        }
+        for parameter in parameters:
+            if parameter.name in values:
+                values[parameter.name] = parameter.value
+
+        if values["desaturation_release_speed"] >= values["desaturation_start_speed"]:
+            return SetParametersResult(successful=False,
+                                       reason="Release speed must be lower than start speed.")
+        if values["desaturation_torque"] <= 0.0:
+            return SetParametersResult(successful=False,
+                                       reason="Desaturation torque must be positive.")
+
+        self._desaturation_start_speed = values["desaturation_start_speed"]
+        self._desaturation_release_speed = values["desaturation_release_speed"]
+        self._desaturation_torque = values["desaturation_torque"]
+        return SetParametersResult(successful=True)
 
     def _wheel_effort(self, error, angular_velocity):
         effort = self._kp * error + self._kd * angular_velocity
