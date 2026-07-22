@@ -170,7 +170,7 @@
   <gazebo reference="rcs_corner_c_z_negative_mount"><preserveFixedJoint>true</preserveFixedJoint></gazebo>
 
   <gazebo>
-    <plugin filename="gz-sim-odometry-publisher-system" name="gz::sim::systems::OdometryPublisher"><dimensions>3</dimensions><odom_publish_frequency>100</odom_publish_frequency></plugin>
+    <plugin filename="gz-sim-odometry-publisher-system" name="gz::sim::systems::OdometryPublisher"><dimensions>3</dimensions><odom_publish_frequency>250</odom_publish_frequency></plugin>
     <plugin filename="gz-sim-spacecraft-thruster-model-system" name="gz::sim::systems::SpacecraftThrusterModel"><link_name>rcs_corner_a_x_positive_thruster</link_name><actuator_number>0</actuator_number><duty_cycle_frequency>20</duty_cycle_frequency><max_thrust>1.0</max_thrust><sub_topic>command/duty_cycle</sub_topic></plugin>
     <plugin filename="gz-sim-spacecraft-thruster-model-system" name="gz::sim::systems::SpacecraftThrusterModel"><link_name>rcs_corner_a_y_positive_thruster</link_name><actuator_number>1</actuator_number><duty_cycle_frequency>20</duty_cycle_frequency><max_thrust>1.0</max_thrust><sub_topic>command/duty_cycle</sub_topic></plugin>
     <plugin filename="gz-sim-spacecraft-thruster-model-system" name="gz::sim::systems::SpacecraftThrusterModel"><link_name>rcs_corner_b_x_negative_thruster</link_name><actuator_number>2</actuator_number><duty_cycle_frequency>20</duty_cycle_frequency><max_thrust>1.0</max_thrust><sub_topic>command/duty_cycle</sub_topic></plugin>

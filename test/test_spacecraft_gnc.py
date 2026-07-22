@@ -4,6 +4,8 @@ from math import cos, pi, sin
 
 from spacecraft_reaction_sim.spacecraft_gnc import (
     attitude_error_body,
+    arm_feedforward_wheel_effort,
+    arm_joint_axes_body,
     clamp,
     position_force_world,
     rotate_vector,
@@ -34,6 +36,17 @@ def test_wheel_command_opposes_positive_target_relative_attitude_error():
     error = attitude_error_body((0.0, 0.0, 0.0, 1.0), yaw_90)
     wheel_effort = clamp(-0.4 * error[2], -0.5, 0.5)
     assert wheel_effort < 0.0
+
+
+def test_arm_feedforward_cancels_zero_pose_actuator_reaction():
+    command = arm_feedforward_wheel_effort(
+        (0.0,) * 6, (2.0, 3.0, 0.0, 4.0, 5.0, 6.0), 0.25)
+    assert command == (-2.5, -2.0, -0.5)
+
+
+def test_arm_axes_follow_the_first_joint_yaw():
+    axes = arm_joint_axes_body((pi / 2.0, 0.0, 0.0, 0.0, 0.0, 0.0))
+    assert tuple(round(value, 12) for value in axes[1]) == (-1.0, 0.0, 0.0)
 
 
 def test_position_pd_requests_force_toward_target():

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Closed-loop pose guidance, wheel control and RCS allocation."""
 
-from math import copysign, sqrt
+from math import copysign, cos, sin, sqrt
 
 import rclpy
 from actuator_msgs.msg import Actuators
@@ -66,6 +66,46 @@ def position_force_world(position, velocity_world, target_position, mass, kp, kd
                      position, velocity_world, target_position))
 
 
+def quaternion_from_axis_angle(axis, angle):
+    half_angle = angle / 2.0
+    sine = sin(half_angle)
+    return (axis[0] * sine, axis[1] * sine, axis[2] * sine, cos(half_angle))
+
+
+def arm_joint_axes_body(joint_positions):
+    """Return the six actuated arm axes expressed in spacecraft-body frame."""
+    if len(joint_positions) != 6:
+        raise ValueError('Exactly six arm joint positions are required.')
+    parent_axes = (
+        (0.0, 0.0, 1.0), (0.0, 1.0, 0.0), (0.0, 1.0, 0.0),
+        (1.0, 0.0, 0.0), (0.0, 1.0, 0.0), (1.0, 0.0, 0.0),
+    )
+    orientation = (0.0, 0.0, 0.0, 1.0)
+    body_axes = []
+    for parent_axis, position in zip(parent_axes, joint_positions):
+        body_axes.append(rotate_vector(orientation, parent_axis))
+        orientation = quaternion_multiply(
+            orientation, quaternion_from_axis_angle(parent_axis, position))
+    return tuple(body_axes)
+
+
+def arm_feedforward_wheel_effort(joint_positions, joint_efforts, gain):
+    """Approximate the wheel command that cancels arm actuator reaction torque.
+
+    The serial-chain motor effort is measured from the joint-state topic. Each arm
+    motor applies its counter-torque to the spacecraft; a wheel motor applies
+    the opposite torque to the base, so its feed-forward command is negative.
+    """
+    if len(joint_efforts) != 6:
+        raise ValueError('Exactly six arm joint efforts are required.')
+    if gain < 0.0:
+        raise ValueError('Feed-forward gain must be non-negative.')
+    axes = arm_joint_axes_body(joint_positions)
+    return tuple(-gain * sum(effort * axis[component]
+                             for effort, axis in zip(joint_efforts, axes))
+                 for component in range(3))
+
+
 def wheel_desaturation_effort(wheel_velocity, was_active, start_speed,
                               release_speed, unload_torque):
     active = was_active
@@ -89,6 +129,8 @@ class SpacecraftGnc(Node):
         self.declare_parameter('attitude_kp', 1.2)
         self.declare_parameter('attitude_kd', 2.0)
         self.declare_parameter('max_wheel_torque', 1.5)
+        self.declare_parameter('enable_arm_feedforward', True)
+        self.declare_parameter('arm_feedforward_gain', 0.15)
         self.declare_parameter('enable_desaturation', True)
         self.declare_parameter('desaturation_start_speed', 314.159)
         self.declare_parameter('desaturation_release_speed', 261.799)
@@ -102,6 +144,8 @@ class SpacecraftGnc(Node):
         self._attitude_kp = self.get_parameter('attitude_kp').value
         self._attitude_kd = self.get_parameter('attitude_kd').value
         self._max_wheel_torque = self.get_parameter('max_wheel_torque').value
+        self._arm_feedforward_enabled = self.get_parameter('enable_arm_feedforward').value
+        self._arm_feedforward_gain = self.get_parameter('arm_feedforward_gain').value
         self._desaturation_enabled = self.get_parameter('enable_desaturation').value
         self._desaturation_start_speed = self.get_parameter('desaturation_start_speed').value
         self._desaturation_release_speed = self.get_parameter('desaturation_release_speed').value
@@ -113,6 +157,8 @@ class SpacecraftGnc(Node):
 
         self._axis_config = (
             ('x', 'wheel_joint_x'), ('y', 'wheel_joint_y'), ('z', 'wheel_joint_z'))
+        self._arm_joint_names = tuple(
+            'arm_joint_%d' % index for index in range(1, 7))
         self._position = None
         self._orientation = None
         self._linear_velocity_body = None
@@ -120,6 +166,8 @@ class SpacecraftGnc(Node):
         self._target_position = None
         self._target_orientation = None
         self._wheel_velocities = {}
+        self._arm_positions = {}
+        self._arm_efforts = {}
         self._desaturation_active = [False, False, False]
 
         self._wheel_publisher = self.create_publisher(
@@ -145,6 +193,8 @@ class SpacecraftGnc(Node):
             raise ValueError('Controller gains must be positive.')
         if self._max_wheel_torque <= 0.0:
             raise ValueError('max_wheel_torque must be positive.')
+        if self._arm_feedforward_gain < 0.0:
+            raise ValueError('arm_feedforward_gain must be non-negative.')
         if self._desaturation_release_speed >= self._desaturation_start_speed:
             raise ValueError('Desaturation release speed must be below start speed.')
         if self._desaturation_torque <= 0.0:
@@ -175,6 +225,15 @@ class SpacecraftGnc(Node):
                 continue
             if index < len(message.velocity):
                 self._wheel_velocities[joint_name] = message.velocity[index]
+        for joint_name in self._arm_joint_names:
+            try:
+                index = message.name.index(joint_name)
+            except ValueError:
+                continue
+            if index < len(message.position):
+                self._arm_positions[joint_name] = message.position[index]
+            if index < len(message.effort):
+                self._arm_efforts[joint_name] = message.effort[index]
 
     def _target_pose_callback(self, message):
         pose = message.pose
@@ -211,6 +270,19 @@ class SpacecraftGnc(Node):
             -self._max_wheel_torque, self._max_wheel_torque)
             for error, angular_rate in zip(
                 attitude_error, self._angular_velocity_body)]
+
+        if self._arm_feedforward_enabled:
+            arm_positions = [self._arm_positions.get(name, 0.0)
+                             for name in self._arm_joint_names]
+            arm_efforts = [self._arm_efforts.get(name, 0.0)
+                           for name in self._arm_joint_names]
+            feedforward = arm_feedforward_wheel_effort(
+                arm_positions, arm_efforts, self._arm_feedforward_gain)
+            wheel_efforts = [clamp(feedback + compensation,
+                                   -self._max_wheel_torque,
+                                   self._max_wheel_torque)
+                             for feedback, compensation in
+                             zip(wheel_efforts, feedforward)]
 
         desaturation_torque = [0.0, 0.0, 0.0]
         transitions = []
@@ -249,6 +321,8 @@ class SpacecraftGnc(Node):
             'attitude_kp': self._attitude_kp,
             'attitude_kd': self._attitude_kd,
             'max_wheel_torque': self._max_wheel_torque,
+            'enable_arm_feedforward': self._arm_feedforward_enabled,
+            'arm_feedforward_gain': self._arm_feedforward_gain,
             'enable_desaturation': self._desaturation_enabled,
             'desaturation_start_speed': self._desaturation_start_speed,
             'desaturation_release_speed': self._desaturation_release_speed,
@@ -262,7 +336,8 @@ class SpacecraftGnc(Node):
         if (values['mass_kg'] <= 0.0 or values['position_kp'] <= 0.0 or
                 values['position_kd'] <= 0.0 or values['attitude_kp'] <= 0.0 or
                 values['attitude_kd'] <= 0.0 or
-                values['max_wheel_torque'] <= 0.0):
+                values['max_wheel_torque'] <= 0.0 or
+                values['arm_feedforward_gain'] < 0.0):
             return SetParametersResult(
                 successful=False, reason='Mass, gains and wheel torque must be positive.')
         if values['desaturation_release_speed'] >= values['desaturation_start_speed']:
@@ -280,6 +355,8 @@ class SpacecraftGnc(Node):
         self._attitude_kp = values['attitude_kp']
         self._attitude_kd = values['attitude_kd']
         self._max_wheel_torque = values['max_wheel_torque']
+        self._arm_feedforward_enabled = values['enable_arm_feedforward']
+        self._arm_feedforward_gain = values['arm_feedforward_gain']
         self._desaturation_enabled = values['enable_desaturation']
         self._desaturation_start_speed = values['desaturation_start_speed']
         self._desaturation_release_speed = values['desaturation_release_speed']
