@@ -70,7 +70,7 @@
     <collision><geometry><box size="1.5 1.2 1.0"/></geometry></collision>
   </link>
 
-  <!-- The two RCS nozzles point in +X. Their +/-Y locations yield opposite Z torques. -->
+  <!-- Each RCS link points along its local +Z thrust axis; mount rotations set its body-frame direction. -->
   <xacro:macro name="rcs_thruster" params="name rgba">
     <inertial><mass value="0.05"/><inertia ixx="0.0001" ixy="0" ixz="0" iyy="0.0001" iyz="0" izz="0.0001"/></inertial>
     <visual><origin xyz="0 0 0.075" rpy="0 0 0"/><geometry><cylinder radius="0.045" length="0.15"/></geometry><material name="rcs_nozzle"><color rgba="0.85 0.85 0.9 1"/></material></visual>
@@ -129,18 +129,17 @@
   <joint name="arm_joint_5" type="revolute"><parent link="arm_link_4"/><child link="arm_link_5"/><origin xyz="0.40 0 0" rpy="0 0 0"/><axis xyz="0 1 0"/><dynamics damping="0" friction="0"/><limit lower="-2.094" upper="2.094" effort="15" velocity="4"/></joint>
   <!-- Joint 6 rolls about the final arm direction (body x), perpendicular to joint 5 (body y). -->
   <joint name="arm_joint_6" type="revolute"><parent link="arm_link_5"/><child link="arm_wrist"/><origin xyz="0.30 0 0" rpy="0 1.570796 0"/><axis xyz="0 0 1"/><dynamics damping="0" friction="0"/><limit lower="-3.142" upper="3.142" effort="10" velocity="4"/></joint>
-  <!-- r=(0,+0.55,0), F=(+1,0,0) gives tau_z=-0.55 N m. -->
+  <!-- Three compact RCS corner modules.  Each corner has two opposed jets for one torque axis.
+       A single jet deliberately produces both torque and a net translational force. -->
+  <!-- Z corner: r=(0,+0.55,0); +X gives -tau_z, -X gives +tau_z. -->
   <joint name="rcs_z_negative_mount" type="fixed"><parent link="spacecraft_base"/><child link="rcs_z_negative_thruster"/><origin xyz="0 0.55 0" rpy="0 1.570796 0"/></joint>
-  <!-- r=(0,-0.55,0), F=(+1,0,0) gives tau_z=+0.55 N m. -->
-  <joint name="rcs_z_positive_mount" type="fixed"><parent link="spacecraft_base"/><child link="rcs_z_positive_thruster"/><origin xyz="0 -0.55 0" rpy="0 1.570796 0"/></joint>
-  <!-- r=(0,+0.52,+0.20), F=(0,0,+1) gives tau_x=+0.52 N m. -->
+  <joint name="rcs_z_positive_mount" type="fixed"><parent link="spacecraft_base"/><child link="rcs_z_positive_thruster"/><origin xyz="0 0.55 0" rpy="0 -1.570796 0"/></joint>
+  <!-- X corner: r=(0,+0.52,+0.20); +Z gives +tau_x, -Z gives -tau_x. -->
   <joint name="rcs_x_positive_mount" type="fixed"><parent link="spacecraft_base"/><child link="rcs_x_positive_thruster"/><origin xyz="0 0.52 0.20" rpy="0 0 0"/></joint>
-  <!-- r=(0,-0.52,+0.20), F=(0,0,+1) gives tau_x=-0.52 N m. -->
-  <joint name="rcs_x_negative_mount" type="fixed"><parent link="spacecraft_base"/><child link="rcs_x_negative_thruster"/><origin xyz="0 -0.52 0.20" rpy="0 0 0"/></joint>
-  <!-- r=(0,0,+0.52), F=(+1,0,0) gives tau_y=+0.52 N m. -->
+  <joint name="rcs_x_negative_mount" type="fixed"><parent link="spacecraft_base"/><child link="rcs_x_negative_thruster"/><origin xyz="0 0.52 0.20" rpy="3.141593 0 0"/></joint>
+  <!-- Y corner: r=(0,0,+0.52); +X gives +tau_y, -X gives -tau_y. -->
   <joint name="rcs_y_positive_mount" type="fixed"><parent link="spacecraft_base"/><child link="rcs_y_positive_thruster"/><origin xyz="0 0 0.52" rpy="0 1.570796 0"/></joint>
-  <!-- r=(0,0,-0.52), F=(+1,0,0) gives tau_y=-0.52 N m. -->
-  <joint name="rcs_y_negative_mount" type="fixed"><parent link="spacecraft_base"/><child link="rcs_y_negative_thruster"/><origin xyz="0 0 -0.52" rpy="0 1.570796 0"/></joint>
+  <joint name="rcs_y_negative_mount" type="fixed"><parent link="spacecraft_base"/><child link="rcs_y_negative_thruster"/><origin xyz="0 0 0.52" rpy="0 -1.570796 0"/></joint>
   <joint name="wheel_joint_x" type="continuous"><parent link="spacecraft_base"/><child link="reaction_wheel_x"/><origin xyz="-0.82 0 0" rpy="0 1.570796 0"/><axis xyz="0 0 1"/><dynamics damping="0" friction="0"/><limit effort="2" velocity="523.599"/></joint>
   <joint name="wheel_joint_y" type="continuous"><parent link="spacecraft_base"/><child link="reaction_wheel_y"/><origin xyz="0 -0.67 0" rpy="-1.570796 0 0"/><axis xyz="0 0 1"/><dynamics damping="0" friction="0"/><limit effort="2" velocity="523.599"/></joint>
   <joint name="wheel_joint_z" type="continuous"><parent link="spacecraft_base"/><child link="reaction_wheel_z"/><origin xyz="0 0 -0.57" rpy="0 0 0"/><axis xyz="0 0 1"/><dynamics damping="0" friction="0"/><limit effort="2" velocity="523.599"/></joint>

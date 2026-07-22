@@ -184,7 +184,7 @@ ros2 launch spacecraft_reaction_sim spacecraft_arm_rcs_pulse.launch.py
 ros2 launch spacecraft_reaction_sim spacecraft_arm_rcs_pulse.launch.py actuator_index:=1
 ```
 
-Actuators `0` and `1` are the Z pair (`-Z`, `+Z` torque). Actuators `2`, `3` are the X pair (`+X`, `-X` torque), and `4`, `5` are the Y pair (`+Y`, `-Y` torque). Each 1.0 N nozzle has a `0.52` or `0.55 m` moment arm. `duration_sec:=<seconds>` changes the default 0.5 s pulse.
+Actuators `0` and `1` form the Z-torque pair, `2` and `3` the X-torque pair, and `4` and `5` the Y-torque pair. The six nozzles are packaged into three corner modules: each corner contains the two opposed jets for one torque axis. A single active jet deliberately produces a resultant translational force as well as torque; this model is attitude / momentum-unloading control, not position hold. Each 1.0 N nozzle has a `0.52` or `0.55 m` moment arm. `duration_sec:=<seconds>` changes the default 0.5 s pulse.
 Gazebo built-in `SpacecraftThrusterModel` applies the force using a 20 Hz PWM
 duty-cycle command; the command returns to zero and the one-shot node exits
 automatically at the end of the pulse.
