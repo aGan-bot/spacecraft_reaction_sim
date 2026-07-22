@@ -76,12 +76,12 @@
     <visual><origin xyz="0 0 0.075" rpy="0 0 0"/><geometry><cylinder radius="0.045" length="0.15"/></geometry><material name="rcs_nozzle"><color rgba="0.85 0.85 0.9 1"/></material></visual>
     <visual><origin xyz="0 0 0.17" rpy="0 0 0"/><geometry><sphere radius="0.035"/></geometry><material name="rcs_thrust_direction"><color rgba="1 0.35 0.05 1"/></material></visual>
   </xacro:macro>
-  <link name="rcs_z_negative_thruster">
-    <xacro:rcs_thruster name="rcs_z_negative_thruster"/>
-  </link>
-  <link name="rcs_z_positive_thruster">
-    <xacro:rcs_thruster name="rcs_z_positive_thruster"/>
-  </link>
+  <link name="rcs_z_negative_thruster"><xacro:rcs_thruster name="rcs_z_negative_thruster"/></link>
+  <link name="rcs_z_positive_thruster"><xacro:rcs_thruster name="rcs_z_positive_thruster"/></link>
+  <link name="rcs_x_positive_thruster"><xacro:rcs_thruster name="rcs_x_positive_thruster"/></link>
+  <link name="rcs_x_negative_thruster"><xacro:rcs_thruster name="rcs_x_negative_thruster"/></link>
+  <link name="rcs_y_positive_thruster"><xacro:rcs_thruster name="rcs_y_positive_thruster"/></link>
+  <link name="rcs_y_negative_thruster"><xacro:rcs_thruster name="rcs_y_negative_thruster"/></link>
 
   <xacro:box_z_link name="arm_link_1" mass="8.0" length="0.35" width="0.12" height="0.12" rgba="0.15 0.55 0.95 1"/>
   <xacro:box_x_link name="arm_link_2" mass="7.0" length="0.60" width="0.12" height="0.12" rgba="0.15 0.75 0.75 1"/>
@@ -131,9 +131,17 @@
   <joint name="rcs_z_negative_mount" type="fixed"><parent link="spacecraft_base"/><child link="rcs_z_negative_thruster"/><origin xyz="0 0.55 0" rpy="0 1.570796 0"/></joint>
   <!-- r=(0,-0.55,0), F=(+1,0,0) gives tau_z=+0.55 N m. -->
   <joint name="rcs_z_positive_mount" type="fixed"><parent link="spacecraft_base"/><child link="rcs_z_positive_thruster"/><origin xyz="0 -0.55 0" rpy="0 1.570796 0"/></joint>
-  <joint name="wheel_joint_x" type="continuous"><parent link="spacecraft_base"/><child link="reaction_wheel_x"/><origin xyz="-0.82 0 0" rpy="0 1.570796 0"/><axis xyz="0 0 1"/><dynamics damping="0" friction="0"/><limit effort="2" velocity="200"/></joint>
-  <joint name="wheel_joint_y" type="continuous"><parent link="spacecraft_base"/><child link="reaction_wheel_y"/><origin xyz="0 -0.67 0" rpy="-1.570796 0 0"/><axis xyz="0 0 1"/><dynamics damping="0" friction="0"/><limit effort="2" velocity="200"/></joint>
-  <joint name="wheel_joint_z" type="continuous"><parent link="spacecraft_base"/><child link="reaction_wheel_z"/><origin xyz="0 0 -0.57" rpy="0 0 0"/><axis xyz="0 0 1"/><dynamics damping="0" friction="0"/><limit effort="2" velocity="200"/></joint>
+  <!-- r=(0,+0.52,+0.20), F=(0,0,+1) gives tau_x=+0.52 N m. -->
+  <joint name="rcs_x_positive_mount" type="fixed"><parent link="spacecraft_base"/><child link="rcs_x_positive_thruster"/><origin xyz="0 0.52 0.20" rpy="0 0 0"/></joint>
+  <!-- r=(0,-0.52,+0.20), F=(0,0,+1) gives tau_x=-0.52 N m. -->
+  <joint name="rcs_x_negative_mount" type="fixed"><parent link="spacecraft_base"/><child link="rcs_x_negative_thruster"/><origin xyz="0 -0.52 0.20" rpy="0 0 0"/></joint>
+  <!-- r=(0,0,+0.52), F=(+1,0,0) gives tau_y=+0.52 N m. -->
+  <joint name="rcs_y_positive_mount" type="fixed"><parent link="spacecraft_base"/><child link="rcs_y_positive_thruster"/><origin xyz="0 0 0.52" rpy="0 1.570796 0"/></joint>
+  <!-- r=(0,0,-0.52), F=(+1,0,0) gives tau_y=-0.52 N m. -->
+  <joint name="rcs_y_negative_mount" type="fixed"><parent link="spacecraft_base"/><child link="rcs_y_negative_thruster"/><origin xyz="0 0 -0.52" rpy="0 1.570796 0"/></joint>
+  <joint name="wheel_joint_x" type="continuous"><parent link="spacecraft_base"/><child link="reaction_wheel_x"/><origin xyz="-0.82 0 0" rpy="0 1.570796 0"/><axis xyz="0 0 1"/><dynamics damping="0" friction="0"/><limit effort="2" velocity="523.599"/></joint>
+  <joint name="wheel_joint_y" type="continuous"><parent link="spacecraft_base"/><child link="reaction_wheel_y"/><origin xyz="0 -0.67 0" rpy="-1.570796 0 0"/><axis xyz="0 0 1"/><dynamics damping="0" friction="0"/><limit effort="2" velocity="523.599"/></joint>
+  <joint name="wheel_joint_z" type="continuous"><parent link="spacecraft_base"/><child link="reaction_wheel_z"/><origin xyz="0 0 -0.57" rpy="0 0 0"/><axis xyz="0 0 1"/><dynamics damping="0" friction="0"/><limit effort="2" velocity="523.599"/></joint>
 
   <ros2_control name="GazeboSimSystem" type="system">
     <hardware><plugin>gz_ros2_control/GazeboSimSystem</plugin></hardware>
@@ -156,11 +164,19 @@
 
   <gazebo reference="rcs_z_negative_mount"><preserveFixedJoint>true</preserveFixedJoint></gazebo>
   <gazebo reference="rcs_z_positive_mount"><preserveFixedJoint>true</preserveFixedJoint></gazebo>
+  <gazebo reference="rcs_x_positive_mount"><preserveFixedJoint>true</preserveFixedJoint></gazebo>
+  <gazebo reference="rcs_x_negative_mount"><preserveFixedJoint>true</preserveFixedJoint></gazebo>
+  <gazebo reference="rcs_y_positive_mount"><preserveFixedJoint>true</preserveFixedJoint></gazebo>
+  <gazebo reference="rcs_y_negative_mount"><preserveFixedJoint>true</preserveFixedJoint></gazebo>
 
   <gazebo>
     <plugin filename="gz-sim-odometry-publisher-system" name="gz::sim::systems::OdometryPublisher"><dimensions>3</dimensions><odom_publish_frequency>100</odom_publish_frequency></plugin>
     <plugin filename="gz-sim-spacecraft-thruster-model-system" name="gz::sim::systems::SpacecraftThrusterModel"><link_name>rcs_z_negative_thruster</link_name><actuator_number>0</actuator_number><duty_cycle_frequency>20</duty_cycle_frequency><max_thrust>1.0</max_thrust><sub_topic>command/duty_cycle</sub_topic></plugin>
     <plugin filename="gz-sim-spacecraft-thruster-model-system" name="gz::sim::systems::SpacecraftThrusterModel"><link_name>rcs_z_positive_thruster</link_name><actuator_number>1</actuator_number><duty_cycle_frequency>20</duty_cycle_frequency><max_thrust>1.0</max_thrust><sub_topic>command/duty_cycle</sub_topic></plugin>
+    <plugin filename="gz-sim-spacecraft-thruster-model-system" name="gz::sim::systems::SpacecraftThrusterModel"><link_name>rcs_x_positive_thruster</link_name><actuator_number>2</actuator_number><duty_cycle_frequency>20</duty_cycle_frequency><max_thrust>1.0</max_thrust><sub_topic>command/duty_cycle</sub_topic></plugin>
+    <plugin filename="gz-sim-spacecraft-thruster-model-system" name="gz::sim::systems::SpacecraftThrusterModel"><link_name>rcs_x_negative_thruster</link_name><actuator_number>3</actuator_number><duty_cycle_frequency>20</duty_cycle_frequency><max_thrust>1.0</max_thrust><sub_topic>command/duty_cycle</sub_topic></plugin>
+    <plugin filename="gz-sim-spacecraft-thruster-model-system" name="gz::sim::systems::SpacecraftThrusterModel"><link_name>rcs_y_positive_thruster</link_name><actuator_number>4</actuator_number><duty_cycle_frequency>20</duty_cycle_frequency><max_thrust>1.0</max_thrust><sub_topic>command/duty_cycle</sub_topic></plugin>
+    <plugin filename="gz-sim-spacecraft-thruster-model-system" name="gz::sim::systems::SpacecraftThrusterModel"><link_name>rcs_y_negative_thruster</link_name><actuator_number>5</actuator_number><duty_cycle_frequency>20</duty_cycle_frequency><max_thrust>1.0</max_thrust><sub_topic>command/duty_cycle</sub_topic></plugin>
     <plugin filename="libgz_ros2_control-system.so" name="gz_ros2_control::GazeboSimROS2ControlPlugin"><parameters>$(arg controllers_file)</parameters><hold_joints>false</hold_joints></plugin>
   </gazebo>
 </robot>

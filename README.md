@@ -149,7 +149,7 @@ ros2 launch spacecraft_reaction_sim spacecraft_arm_attitude_hold.launch.py
 
 This starts manual arm and wheel effort controllers, then starts attitude hold after ten seconds. The hold controller captures the first spacecraft attitude received from odometry and commands wheel torques to preserve it.
 
-The Z wheel is also protected by the first automatic momentum-desaturation loop. At `180 rad/s` (about `1719 rpm`) it overrides the Z wheel command with a `0.30 N m` braking torque and fires the matching opposite RCS nozzle. It releases control below `150 rad/s` (`1432 rpm`). X and Y wheel desaturation will be added with their own RCS pairs.
+All three wheels are protected by momentum-desaturation loops. The nominal wheel limit is `5000 rpm` (`523.599 rad/s`), equivalent to `33.51 N m s` at the model inertia `J = 0.064 kg m^2`. At `3000 rpm` (`314.159 rad/s`, `20.11 N m s`) a loop overrides its wheel command with a `0.30 N m` braking torque and fires the matching opposite RCS nozzle. It releases below `2500 rpm` (`261.799 rad/s`, `16.76 N m s`).
 
 ### 5. JTC with reaction-wheel attitude hold
 
@@ -174,7 +174,7 @@ rqt --force-discover --standalone JointTrajectoryController
 
 Select `/arm_trajectory_controller`, set joint targets within their limits, choose a low velocity, and execute the trajectory.
 
-### 6. Paired Z-axis RCS pulses
+### 6. Six-axis RCS pulses
 
 ```bash
 # actuator 0: -Z body torque
@@ -184,10 +184,7 @@ ros2 launch spacecraft_reaction_sim spacecraft_arm_rcs_pulse.launch.py
 ros2 launch spacecraft_reaction_sim spacecraft_arm_rcs_pulse.launch.py actuator_index:=1
 ```
 
-Two fixed nozzles are placed at body positions `(0, +0.55, 0)` and
-`(0, -0.55, 0)`. Both apply `+X` body-frame force, so each 1.0 N pulse
-produces the same small forward translation but an opposite Z torque of about
-`-/+0.55 N m`. `duration_sec:=<seconds>` changes the default 0.5 s pulse.
+Actuators `0` and `1` are the Z pair (`-Z`, `+Z` torque). Actuators `2`, `3` are the X pair (`+X`, `-X` torque), and `4`, `5` are the Y pair (`+Y`, `-Y` torque). Each 1.0 N nozzle has a `0.52` or `0.55 m` moment arm. `duration_sec:=<seconds>` changes the default 0.5 s pulse.
 Gazebo built-in `SpacecraftThrusterModel` applies the force using a 20 Hz PWM
 duty-cycle command; the command returns to zero and the one-shot node exits
 automatically at the end of the pulse.
@@ -227,7 +224,7 @@ Connect Foxglove to `ws://localhost:8765`. A useful layout has a 3D panel, a con
 ## Current limitations and next steps
 
 - Attitude hold uses a small-angle PD controller and holds the initial attitude; it does not yet accept a world-frame attitude target.
-- Z-axis momentum desaturation is implemented with two opposed RCS nozzles. Equivalent X and Y RCS pairs are the next control milestone.
+- Three-axis reaction-wheel desaturation and six RCS nozzles are implemented. Saturation is software-managed because effort-controlled Gazebo joints do not enforce URDF velocity limits.
 - JTC controls joint trajectories only. Holding the end effector fixed in the world frame while changing spacecraft attitude requires a future floating-base task-space or inverse-kinematics controller.
 - Geometry and inertial values are simplified for control experiments and are not a flight-qualified spacecraft model.
 

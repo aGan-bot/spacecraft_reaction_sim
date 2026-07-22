@@ -3,7 +3,7 @@
 from math import pi, sin
 
 from spacecraft_reaction_sim.attitude_hold import (
-    AttitudeHold, quaternion_to_rpy, z_wheel_desaturation,
+    AttitudeHold, quaternion_to_rpy, wheel_desaturation, z_wheel_desaturation,
 )
 
 
@@ -29,23 +29,39 @@ def test_wheel_effort_is_limited():
 
 def test_positive_z_wheel_unload_uses_negative_z_rcs():
     torque, command, active = z_wheel_desaturation(
-        185.0, False, 180.0, 150.0, 0.30, 0.55)
+        315.0, False, 314.159, 261.799, 0.30, 0.55)
     assert torque == -0.30
-    assert command == [0.30 / 0.55, 0.0]
+    assert command == [0.30 / 0.55, 0.0, 0.0, 0.0, 0.0, 0.0]
     assert active
 
 
 def test_negative_z_wheel_unload_uses_positive_z_rcs():
     torque, command, active = z_wheel_desaturation(
-        -185.0, False, 180.0, 150.0, 0.30, 0.55)
+        -315.0, False, 314.159, 261.799, 0.30, 0.55)
     assert torque == 0.30
-    assert command == [0.0, 0.30 / 0.55]
+    assert command == [0.0, 0.30 / 0.55, 0.0, 0.0, 0.0, 0.0]
     assert active
 
 
 def test_desaturation_stops_at_release_speed():
     torque, command, active = z_wheel_desaturation(
-        150.0, True, 180.0, 150.0, 0.30, 0.55)
+        261.799, True, 314.159, 261.799, 0.30, 0.55)
     assert torque == 0.0
-    assert command == [0.0, 0.0]
+    assert command == [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
     assert not active
+
+
+def test_positive_x_wheel_unload_uses_negative_x_rcs():
+    torque, command, active = wheel_desaturation(
+        315.0, False, 314.159, 261.799, 0.30, 0.52, 2, 3)
+    assert torque == -0.30
+    assert command == [0.0, 0.0, 0.0, 0.30 / 0.52, 0.0, 0.0]
+    assert active
+
+
+def test_negative_y_wheel_unload_uses_positive_y_rcs():
+    torque, command, active = wheel_desaturation(
+        -315.0, False, 314.159, 261.799, 0.30, 0.52, 4, 5)
+    assert torque == 0.30
+    assert command == [0.0, 0.0, 0.0, 0.0, 0.30 / 0.52, 0.0]
+    assert active
