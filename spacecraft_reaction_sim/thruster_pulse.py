@@ -65,7 +65,7 @@ class ThrusterPulse(Node):
         self.get_logger().info("RCS pulse complete; actuator %d command set to zero."
             % self._actuator_index)
 
-    
+
     def complete(self):
         """Whether the zero command has been published after the requested pulse."""
         return self._complete
