@@ -149,7 +149,7 @@ ros2 launch spacecraft_reaction_sim spacecraft_arm_attitude_hold.launch.py
 
 This starts manual arm and wheel effort controllers, then starts attitude hold after ten seconds. The hold controller captures the first spacecraft attitude received from odometry and commands wheel torques to preserve it.
 
-All three wheels are protected by momentum-desaturation loops. The nominal wheel limit is `5000 rpm` (`523.599 rad/s`), equivalent to `33.51 N m s` at the model inertia `J = 0.064 kg m^2`. At `3000 rpm` (`314.159 rad/s`, `20.11 N m s`) a loop overrides its wheel command with a `0.30 N m` braking torque and fires the matching opposite RCS nozzle. It releases below `2500 rpm` (`261.799 rad/s`, `16.76 N m s`).
+All three wheels are protected by momentum-desaturation loops. The nominal wheel limit is `5000 rpm` (`523.599 rad/s`), equivalent to `33.51 N m s` at the model inertia `J = 0.064 kg m^2`. At `3000 rpm` (`314.159 rad/s`, `20.11 N m s`) a loop overrides its wheel command with a `0.30 N m` braking torque. The three-corner RCS wrench allocator then selects bounded nozzle duties that prioritize the requested unloading torque while allowing the physically coupled translation. It releases below `2500 rpm` (`261.799 rad/s`, `16.76 N m s`).
 
 ### 5. JTC with reaction-wheel attitude hold
 
@@ -177,14 +177,14 @@ Select `/arm_trajectory_controller`, set joint targets within their limits, choo
 ### 6. Six-axis RCS pulses
 
 ```bash
-# actuator 0: -Z body torque
+# actuator 0: +X body force at corner A
 ros2 launch spacecraft_reaction_sim spacecraft_arm_rcs_pulse.launch.py
 
-# actuator 1: +Z body torque
+# actuator 1: +Y body force at corner A
 ros2 launch spacecraft_reaction_sim spacecraft_arm_rcs_pulse.launch.py actuator_index:=1
 ```
 
-Actuators `0` and `1` form the Z-torque pair, `2` and `3` the X-torque pair, and `4` and `5` the Y-torque pair. The six nozzles are packaged into three corner modules: each corner contains the two opposed jets for one torque axis. A single active jet deliberately produces a resultant translational force as well as torque; this model is attitude / momentum-unloading control, not position hold. Each 1.0 N nozzle has a `0.52` or `0.55 m` moment arm. `duration_sec:=<seconds>` changes the default 0.5 s pulse.
+The six nozzles are mounted on three cube corners and use this fixed actuator order: `0=+X`, `1=+Y` at corner A `(-X,-Y,-Z)`; `2=-X`, `3=+Z` at corner B `(-X,-Y,+Z)`; `4=-Y`, `5=-Z` at corner C `(+X,+Y,-Z)`. Red arrows are X jets, green are Y and blue are Z. A bounded wrench allocator converts a requested body-frame `[Fx, Fy, Fz, Tx, Ty, Tz]` into the six duty cycles. Equal opposing jets can cancel force and reinforce torque; unequal duties deliberately combine rotation with translation. Because every jet is one-directional, not every arbitrary six-axis wrench is instantly reachable. `duration_sec:=<seconds>` changes the default 0.5 s pulse.
 Gazebo built-in `SpacecraftThrusterModel` applies the force using a 20 Hz PWM
 duty-cycle command; the command returns to zero and the one-shot node exits
 automatically at the end of the pulse.
@@ -224,7 +224,7 @@ Connect Foxglove to `ws://localhost:8765`. A useful layout has a 3D panel, a con
 ## Current limitations and next steps
 
 - Attitude hold uses a small-angle PD controller and holds the initial attitude; it does not yet accept a world-frame attitude target.
-- Three-axis reaction-wheel desaturation and six RCS nozzles are implemented. Saturation is software-managed because effort-controlled Gazebo joints do not enforce URDF velocity limits.
+- Three-axis reaction-wheel desaturation, a three-corner six-nozzle RCS layout, and bounded wrench allocation are implemented. Saturation is software-managed because effort-controlled Gazebo joints do not enforce URDF velocity limits.
 - JTC controls joint trajectories only. Holding the end effector fixed in the world frame while changing spacecraft attitude requires a future floating-base task-space or inverse-kinematics controller.
 - Geometry and inertial values are simplified for control experiments and are not a flight-qualified spacecraft model.
 

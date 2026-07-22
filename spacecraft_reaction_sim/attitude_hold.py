@@ -10,6 +10,7 @@ from rclpy.node import Node
 from rcl_interfaces.msg import SetParametersResult
 from sensor_msgs.msg import JointState
 from std_msgs.msg import Float64MultiArray
+from spacecraft_reaction_sim.wrench_allocator import allocate_wrench
 
 
 def quaternion_to_rpy(x, y, z, w):
@@ -67,9 +68,9 @@ class AttitudeHold(Node):
         self._desaturation_release_speed = self.get_parameter('desaturation_release_speed').value
         self._desaturation_torque = self.get_parameter('desaturation_torque').value
         self._axis_config = (
-            ('x', 'wheel_joint_x', 2, 3, 0.52),
-            ('y', 'wheel_joint_y', 4, 5, 0.52),
-            ('z', 'wheel_joint_z', 1, 0, 0.55),
+            ('x', 'wheel_joint_x'),
+            ('y', 'wheel_joint_y'),
+            ('z', 'wheel_joint_z'),
         )
         if self._desaturation_release_speed >= self._desaturation_start_speed:
             raise ValueError('Desaturation release speed must be lower than start speed.')
@@ -93,7 +94,7 @@ class AttitudeHold(Node):
         self.get_logger().info('Waiting for odometry; first pose becomes the attitude reference.')
 
     def _joint_state_callback(self, message):
-        for _, joint_name, _, _, _ in self._axis_config:
+        for _, joint_name in self._axis_config:
             try:
                 index = message.name.index(joint_name)
             except ValueError:
@@ -122,27 +123,31 @@ class AttitudeHold(Node):
         self._publisher.publish(Float64MultiArray(data=efforts))
 
     def _apply_desaturation(self, efforts):
-        rcs_command = [0.0] * 6
-        for axis_index, (axis, joint_name, positive_rcs, negative_rcs, rcs_torque) in enumerate(
-                self._axis_config):
+        desired_torque = [0.0, 0.0, 0.0]
+        transitions = []
+        for axis_index, (axis, joint_name) in enumerate(self._axis_config):
             was_active = self._desaturation_active[axis_index]
             wheel_velocity = self._wheel_velocities.get(joint_name)
             if self._desaturation_enabled and wheel_velocity is not None:
-                effort, command, active = wheel_desaturation(
+                effort, _, active = wheel_desaturation(
                     wheel_velocity, was_active, self._desaturation_start_speed,
                     self._desaturation_release_speed, self._desaturation_torque,
-                    rcs_torque, positive_rcs, negative_rcs)
+                    1.0, 0, 0)
                 self._desaturation_active[axis_index] = active
                 if active:
                     efforts[axis_index] = effort
-                    rcs_command = [max(old, new) for old, new in zip(rcs_command, command)]
+                    desired_torque[axis_index] = effort
             if was_active != self._desaturation_active[axis_index]:
                 state = "started" if self._desaturation_active[axis_index] else "finished"
-                active_duty = max(rcs_command) if active else 0.0
-                self.get_logger().info(
-                    "%s-wheel momentum desaturation %s "
-                    "(wheel=%.3f rad/s, RCS duty=%.3f)." % (
-                        axis.upper(), state, wheel_velocity, active_duty))
+                transitions.append((axis, state, wheel_velocity))
+
+        rcs_command = allocate_wrench((0.0, 0.0, 0.0, *desired_torque))
+        active_duty = max(rcs_command)
+        for axis, state, wheel_velocity in transitions:
+            self.get_logger().info(
+                "%s-wheel momentum desaturation %s "
+                "(wheel=%.3f rad/s, RCS duty=%.3f)." % (
+                    axis.upper(), state, wheel_velocity, active_duty))
         self._rcs_publisher.publish(Actuators(normalized=rcs_command))
 
     def _parameter_callback(self, parameters):

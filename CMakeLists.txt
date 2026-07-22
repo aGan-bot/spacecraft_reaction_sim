@@ -38,6 +38,7 @@ if(BUILD_TESTING)
   ament_add_pytest_test(attitude_hold_test test/test_attitude_hold.py)
   ament_add_pytest_test(arm_position_hold_test test/test_arm_position_hold.py)
   ament_add_pytest_test(thruster_pulse_test test/test_thruster_pulse.py)
+  ament_add_pytest_test(wrench_allocator_test test/test_wrench_allocator.py)
 endif()
 
 ament_package()
