@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 """Hold the spacecraft's initial attitude with three reaction wheels."""
 
-from math import asin, atan2
+from math import asin, atan2, copysign
 
 import rclpy
+from actuator_msgs.msg import Actuators
 from nav_msgs.msg import Odometry
 from rclpy.node import Node
+from sensor_msgs.msg import JointState
 from std_msgs.msg import Float64MultiArray
 
 
@@ -18,6 +20,24 @@ def quaternion_to_rpy(x, y, z, w):
     return roll, pitch, yaw
 
 
+def z_wheel_desaturation(wheel_velocity, was_active, start_speed,
+                          release_speed, unload_torque, rcs_torque):
+    """Return z-wheel torque, two RCS duty cycles, and active-state."""
+    speed = abs(wheel_velocity)
+    active = was_active
+    if active and speed <= release_speed:
+        active = False
+    elif not active and speed >= start_speed:
+        active = True
+    if not active:
+        return 0.0, [0.0, 0.0], False
+
+    motor_torque = -copysign(unload_torque, wheel_velocity)
+    duty_cycle = min(abs(motor_torque) / rcs_torque, 1.0)
+    rcs_command = [duty_cycle, 0.0] if motor_torque < 0.0 else [0.0, duty_cycle]
+    return motor_torque, rcs_command, True
+
+
 class AttitudeHold(Node):
     """Command wheel torques that counter small spacecraft attitude errors."""
 
@@ -26,18 +46,46 @@ class AttitudeHold(Node):
         self.declare_parameter('kp', 0.4)
         self.declare_parameter('kd', 1.0)
         self.declare_parameter('max_wheel_torque', 0.5)
+        self.declare_parameter('enable_z_desaturation', True)
+        self.declare_parameter('z_desaturation_start_speed', 180.0)
+        self.declare_parameter('z_desaturation_release_speed', 150.0)
+        self.declare_parameter('z_desaturation_torque', 0.30)
+        self.declare_parameter('z_rcs_torque', 0.55)
         self._kp = self.get_parameter('kp').value
         self._kd = self.get_parameter('kd').value
         self._max_torque = self.get_parameter('max_wheel_torque').value
+        self._desaturation_enabled = self.get_parameter('enable_z_desaturation').value
+        self._desaturation_start_speed = self.get_parameter('z_desaturation_start_speed').value
+        self._desaturation_release_speed = self.get_parameter('z_desaturation_release_speed').value
+        self._desaturation_torque = self.get_parameter('z_desaturation_torque').value
+        self._z_rcs_torque = self.get_parameter('z_rcs_torque').value
+        if self._desaturation_release_speed >= self._desaturation_start_speed:
+            raise ValueError('Z desaturation release speed must be lower than start speed.')
+        if self._desaturation_torque <= 0.0 or self._z_rcs_torque <= 0.0:
+            raise ValueError('Desaturation torques must be positive.')
         self._reference_rpy = None
         self._orientation = None
         self._angular_velocity = None
+        self._wheel_z_velocity = None
+        self._z_desaturation_active = False
         self._publisher = self.create_publisher(
             Float64MultiArray, '/reaction_wheel_effort_controller/commands', 10)
+        self._rcs_publisher = self.create_publisher(
+            Actuators, '/spacecraft_arm/command/duty_cycle', 10)
         self._subscription = self.create_subscription(
             Odometry, '/model/spacecraft_arm/odometry', self._odometry_callback, 10)
+        self._joint_subscription = self.create_subscription(
+            JointState, '/joint_states', self._joint_state_callback, 10)
         self._timer = self.create_timer(0.01, self._publish_command)
         self.get_logger().info('Waiting for odometry; first pose becomes the attitude reference.')
+
+    def _joint_state_callback(self, message):
+        try:
+            index = message.name.index('wheel_joint_z')
+        except ValueError:
+            return
+        if index < len(message.velocity):
+            self._wheel_z_velocity = message.velocity[index]
 
     def _odometry_callback(self, message):
         orientation = message.pose.pose.orientation
@@ -56,7 +104,23 @@ class AttitudeHold(Node):
             self._orientation, self._reference_rpy)]
         efforts = [self._wheel_effort(error, velocity)
                    for error, velocity in zip(errors, self._angular_velocity)]
+        self._apply_z_desaturation(efforts)
         self._publisher.publish(Float64MultiArray(data=efforts))
+
+    def _apply_z_desaturation(self, efforts):
+        rcs_command = [0.0, 0.0]
+        was_active = self._z_desaturation_active
+        if self._desaturation_enabled and self._wheel_z_velocity is not None:
+            effort, rcs_command, self._z_desaturation_active = z_wheel_desaturation(
+                self._wheel_z_velocity, was_active, self._desaturation_start_speed,
+                self._desaturation_release_speed, self._desaturation_torque,
+                self._z_rcs_torque)
+            if self._z_desaturation_active:
+                efforts[2] = effort
+        if was_active != self._z_desaturation_active:
+            state = 'started' if self._z_desaturation_active else 'finished'
+            self.get_logger().info('Z-wheel momentum desaturation %s.' % state)
+        self._rcs_publisher.publish(Actuators(normalized=rcs_command))
 
     def _wheel_effort(self, error, angular_velocity):
         effort = self._kp * error + self._kd * angular_velocity

@@ -53,7 +53,7 @@ rosdep update
 ```bash
 mkdir -p ~/spacecraft_ws/src
 cd ~/spacecraft_ws/src
-git clone https://github.com/<YOUR_GITHUB_USER>/spacecraft_reaction_sim.git
+git clone https://github.com/aGan-bot/spacecraft_reaction_sim.git
 cd ..
 
 source /opt/ros/jazzy/setup.bash
@@ -149,6 +149,8 @@ ros2 launch spacecraft_reaction_sim spacecraft_arm_attitude_hold.launch.py
 
 This starts manual arm and wheel effort controllers, then starts attitude hold after ten seconds. The hold controller captures the first spacecraft attitude received from odometry and commands wheel torques to preserve it.
 
+The Z wheel is also protected by the first automatic momentum-desaturation loop. At `180 rad/s` (about `1719 rpm`) it overrides the Z wheel command with a `0.30 N m` braking torque and fires the matching opposite RCS nozzle. It releases control below `150 rad/s` (`1432 rpm`). X and Y wheel desaturation will be added with their own RCS pairs.
+
 ### 5. JTC with reaction-wheel attitude hold
 
 ```bash
@@ -171,6 +173,24 @@ rqt --force-discover --standalone JointTrajectoryController
 ```
 
 Select `/arm_trajectory_controller`, set joint targets within their limits, choose a low velocity, and execute the trajectory.
+
+### 6. Paired Z-axis RCS pulses
+
+```bash
+# actuator 0: -Z body torque
+ros2 launch spacecraft_reaction_sim spacecraft_arm_rcs_pulse.launch.py
+
+# actuator 1: +Z body torque
+ros2 launch spacecraft_reaction_sim spacecraft_arm_rcs_pulse.launch.py actuator_index:=1
+```
+
+Two fixed nozzles are placed at body positions `(0, +0.55, 0)` and
+`(0, -0.55, 0)`. Both apply `+X` body-frame force, so each 1.0 N pulse
+produces the same small forward translation but an opposite Z torque of about
+`-/+0.55 N m`. `duration_sec:=<seconds>` changes the default 0.5 s pulse.
+Gazebo built-in `SpacecraftThrusterModel` applies the force using a 20 Hz PWM
+duty-cycle command; the command returns to zero and the one-shot node exits
+automatically at the end of the pulse.
 
 ## Monitoring and plots
 
@@ -207,7 +227,7 @@ Connect Foxglove to `ws://localhost:8765`. A useful layout has a 3D panel, a con
 ## Current limitations and next steps
 
 - Attitude hold uses a small-angle PD controller and holds the initial attitude; it does not yet accept a world-frame attitude target.
-- Reaction wheels eventually saturate. No thruster, magnetorquer, or momentum-desaturation model is included.
+- Z-axis momentum desaturation is implemented with two opposed RCS nozzles. Equivalent X and Y RCS pairs are the next control milestone.
 - JTC controls joint trajectories only. Holding the end effector fixed in the world frame while changing spacecraft attitude requires a future floating-base task-space or inverse-kinematics controller.
 - Geometry and inertial values are simplified for control experiments and are not a flight-qualified spacecraft model.
 

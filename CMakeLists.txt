@@ -21,6 +21,11 @@ install(
   DESTINATION lib/${PROJECT_NAME}
   RENAME arm_position_hold
 )
+install(
+  PROGRAMS spacecraft_reaction_sim/thruster_pulse.py
+  DESTINATION lib/${PROJECT_NAME}
+  RENAME thruster_pulse
+)
 
 install(
   DIRECTORY config launch urdf worlds
@@ -32,6 +37,7 @@ if(BUILD_TESTING)
   ament_add_pytest_test(reaction_experiment_test test/test_reaction_experiment.py)
   ament_add_pytest_test(attitude_hold_test test/test_attitude_hold.py)
   ament_add_pytest_test(arm_position_hold_test test/test_arm_position_hold.py)
+  ament_add_pytest_test(thruster_pulse_test test/test_thruster_pulse.py)
 endif()
 
 ament_package()

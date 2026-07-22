@@ -4,7 +4,7 @@
   <name>spacecraft_reaction_sim</name>
   <version>0.1.0</version>
   <description>Free-floating spacecraft reaction simulation with Gazebo Sim and effort-controlled wrist.</description>
-  <maintainer email="agan.simsek@altinay.com">as</maintainer>
+  <maintainer email="agan.simsek@gmail.com">aGan SimSek</maintainer>
   <license>Apache-2.0</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
@@ -23,6 +23,7 @@
   <exec_depend>rqt_joint_trajectory_controller</exec_depend>
   <exec_depend>robot_state_publisher</exec_depend>
   <exec_depend>ros_gz_bridge</exec_depend>
+  <exec_depend>actuator_msgs</exec_depend>
   <exec_depend>ros_gz_sim</exec_depend>
   <exec_depend>rosgraph_msgs</exec_depend>
   <exec_depend>sensor_msgs</exec_depend>

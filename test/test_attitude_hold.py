@@ -2,7 +2,9 @@
 
 from math import pi, sin
 
-from spacecraft_reaction_sim.attitude_hold import AttitudeHold, quaternion_to_rpy
+from spacecraft_reaction_sim.attitude_hold import (
+    AttitudeHold, quaternion_to_rpy, z_wheel_desaturation,
+)
 
 
 def test_identity_quaternion_has_zero_rpy():
@@ -23,3 +25,27 @@ def test_wheel_effort_is_limited():
     controller._kd = 1.0
     controller._max_torque = 0.5
     assert controller._wheel_effort(4.0, 4.0) == 0.5
+
+
+def test_positive_z_wheel_unload_uses_negative_z_rcs():
+    torque, command, active = z_wheel_desaturation(
+        185.0, False, 180.0, 150.0, 0.30, 0.55)
+    assert torque == -0.30
+    assert command == [0.30 / 0.55, 0.0]
+    assert active
+
+
+def test_negative_z_wheel_unload_uses_positive_z_rcs():
+    torque, command, active = z_wheel_desaturation(
+        -185.0, False, 180.0, 150.0, 0.30, 0.55)
+    assert torque == 0.30
+    assert command == [0.0, 0.30 / 0.55]
+    assert active
+
+
+def test_desaturation_stops_at_release_speed():
+    torque, command, active = z_wheel_desaturation(
+        150.0, True, 180.0, 150.0, 0.30, 0.55)
+    assert torque == 0.0
+    assert command == [0.0, 0.0]
+    assert not active

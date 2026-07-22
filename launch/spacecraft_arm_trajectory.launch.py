@@ -39,6 +39,9 @@ def generate_launch_description():
         package='ros_gz_bridge', executable='parameter_bridge',
         arguments=['/model/spacecraft_arm/odometry@nav_msgs/msg/Odometry[gz.msgs.Odometry'],
         output='screen')
+    actuator_bridge = Node(
+        package='ros_gz_bridge', executable='parameter_bridge',
+        arguments=['/spacecraft_arm/command/duty_cycle@actuator_msgs/msg/Actuators]gz.msgs.Actuators'], output='screen')
     joint_state_broadcaster = Node(
         package='controller_manager', executable='spawner',
         arguments=['arm_joint_state_broadcaster', '-c', '/controller_manager'], output='screen')
@@ -60,6 +63,7 @@ def generate_launch_description():
         robot_state_publisher,
         clock_bridge,
         odometry_bridge,
+        actuator_bridge,
         TimerAction(period=2.0, actions=[spawn_model]),
         TimerAction(period=5.0, actions=[joint_state_broadcaster]),
         TimerAction(period=7.0, actions=[trajectory_controller]),
