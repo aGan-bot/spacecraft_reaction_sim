@@ -7,10 +7,10 @@ from rclpy.node import Node
 
 
 def normalized_command(actuator_index, enabled):
-    """Return a normalized vector with exactly one selected actuator enabled."""
-    if actuator_index < 0:
-        raise ValueError("Actuator index must be non-negative.")
-    command = [0.0] * (actuator_index + 1)
+    """Return the six-slot actuator vector expected by Gazebo RCS plugins."""
+    if not 0 <= actuator_index < 6:
+        raise ValueError("Actuator index must be in the range [0, 5].")
+    command = [0.0] * 6
     if enabled:
         command[actuator_index] = 1.0
     return command
@@ -29,8 +29,8 @@ class ThrusterPulse(Node):
         self._actuator_index = self.get_parameter("actuator_index").value
         if command_rate <= 0.0:
             raise ValueError("Command rate must be positive.")
-        if self._actuator_index < 0:
-            raise ValueError("Actuator index must be non-negative.")
+        if not 0 <= self._actuator_index < 6:
+            raise ValueError("Actuator index must be in the range [0, 5].")
         self._started_at = None
         self._complete = False
         self._publisher = self.create_publisher(
