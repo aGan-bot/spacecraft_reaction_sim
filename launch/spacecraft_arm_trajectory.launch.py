@@ -1,12 +1,12 @@
 """Launch the free-floating arm with rqt-compatible trajectory control."""
 
 from launch import LaunchDescription
-from launch.actions import IncludeLaunchDescription, TimerAction
+from launch.actions import IncludeLaunchDescription, SetEnvironmentVariable, TimerAction
 from launch.launch_description_sources import PythonLaunchDescriptionSource
-from launch.substitutions import Command, PathJoinSubstitution
+from launch.substitutions import Command, EnvironmentVariable, PathJoinSubstitution
 from launch_ros.actions import Node
 from launch_ros.parameter_descriptions import ParameterValue
-from launch_ros.substitutions import FindPackageShare
+from launch_ros.substitutions import FindPackagePrefix, FindPackageShare
 
 
 def generate_launch_description():
@@ -58,7 +58,10 @@ def generate_launch_description():
                      'max_wheel_torque': 0.5}],
         output='screen')
 
+    plugin_path = PathJoinSubstitution([FindPackagePrefix('spacecraft_reaction_sim'), 'lib'])
     return LaunchDescription([
+        SetEnvironmentVariable('GZ_SIM_SYSTEM_PLUGIN_PATH', [
+            EnvironmentVariable('GZ_SIM_SYSTEM_PLUGIN_PATH', default_value=''), ':', plugin_path]),
         gazebo,
         robot_state_publisher,
         clock_bridge,

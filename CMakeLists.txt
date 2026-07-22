@@ -3,6 +3,20 @@ project(spacecraft_reaction_sim)
 
 find_package(ament_cmake REQUIRED)
 find_package(ament_cmake_python REQUIRED)
+find_package(gz-sim8 REQUIRED)
+find_package(gz-transport13 REQUIRED)
+find_package(gz-msgs10 REQUIRED)
+find_package(gz-plugin2 REQUIRED)
+
+add_library(rcs_plume_system SHARED src/rcs_plume_system.cpp)
+target_compile_features(rcs_plume_system PRIVATE cxx_std_17)
+target_link_libraries(rcs_plume_system PRIVATE
+  gz-sim8::gz-sim8
+  gz-transport13::gz-transport13
+  gz-msgs10::gz-msgs10
+  gz-plugin2::gz-plugin2
+)
+install(TARGETS rcs_plume_system DESTINATION lib)
 
 ament_python_install_package(${PROJECT_NAME})
 
