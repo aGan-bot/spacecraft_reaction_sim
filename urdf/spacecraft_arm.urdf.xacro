@@ -164,12 +164,12 @@
     <xacro:effort_joint name="wheel_joint_z" limit="2"/>
   </ros2_control>
 
-  <gazebo reference="rcs_z_negative_mount"><preserveFixedJoint>true</preserveFixedJoint><particle_emitter name="plume" type="point"><emitting>false</emitting><particle_size>0.035 0.035 0.035</particle_size><lifetime>0.10</lifetime><min_velocity>1.2</min_velocity><max_velocity>1.8</max_velocity><scale_rate>2.0</scale_rate><rate>0</rate><material><diffuse>1 0.45 0.05 0.75</diffuse><specular>1 0.45 0.05 0.75</specular></material></particle_emitter></gazebo>
-  <gazebo reference="rcs_z_positive_mount"><preserveFixedJoint>true</preserveFixedJoint><particle_emitter name="plume" type="point"><emitting>false</emitting><particle_size>0.035 0.035 0.035</particle_size><lifetime>0.10</lifetime><min_velocity>1.2</min_velocity><max_velocity>1.8</max_velocity><scale_rate>2.0</scale_rate><rate>0</rate><material><diffuse>1 0.45 0.05 0.75</diffuse><specular>1 0.45 0.05 0.75</specular></material></particle_emitter></gazebo>
-  <gazebo reference="rcs_x_positive_mount"><preserveFixedJoint>true</preserveFixedJoint><particle_emitter name="plume" type="point"><emitting>false</emitting><particle_size>0.035 0.035 0.035</particle_size><lifetime>0.10</lifetime><min_velocity>1.2</min_velocity><max_velocity>1.8</max_velocity><scale_rate>2.0</scale_rate><rate>0</rate><material><diffuse>1 0.45 0.05 0.75</diffuse><specular>1 0.45 0.05 0.75</specular></material></particle_emitter></gazebo>
-  <gazebo reference="rcs_x_negative_mount"><preserveFixedJoint>true</preserveFixedJoint><particle_emitter name="plume" type="point"><emitting>false</emitting><particle_size>0.035 0.035 0.035</particle_size><lifetime>0.10</lifetime><min_velocity>1.2</min_velocity><max_velocity>1.8</max_velocity><scale_rate>2.0</scale_rate><rate>0</rate><material><diffuse>1 0.45 0.05 0.75</diffuse><specular>1 0.45 0.05 0.75</specular></material></particle_emitter></gazebo>
-  <gazebo reference="rcs_y_positive_mount"><preserveFixedJoint>true</preserveFixedJoint><particle_emitter name="plume" type="point"><emitting>false</emitting><particle_size>0.035 0.035 0.035</particle_size><lifetime>0.10</lifetime><min_velocity>1.2</min_velocity><max_velocity>1.8</max_velocity><scale_rate>2.0</scale_rate><rate>0</rate><material><diffuse>1 0.45 0.05 0.75</diffuse><specular>1 0.45 0.05 0.75</specular></material></particle_emitter></gazebo>
-  <gazebo reference="rcs_y_negative_mount"><preserveFixedJoint>true</preserveFixedJoint><particle_emitter name="plume" type="point"><emitting>false</emitting><particle_size>0.035 0.035 0.035</particle_size><lifetime>0.10</lifetime><min_velocity>1.2</min_velocity><max_velocity>1.8</max_velocity><scale_rate>2.0</scale_rate><rate>0</rate><material><diffuse>1 0.45 0.05 0.75</diffuse><specular>1 0.45 0.05 0.75</specular></material></particle_emitter></gazebo>
+  <gazebo reference="rcs_z_negative_mount"><preserveFixedJoint>true</preserveFixedJoint></gazebo>
+  <gazebo reference="rcs_z_positive_mount"><preserveFixedJoint>true</preserveFixedJoint></gazebo>
+  <gazebo reference="rcs_x_positive_mount"><preserveFixedJoint>true</preserveFixedJoint></gazebo>
+  <gazebo reference="rcs_x_negative_mount"><preserveFixedJoint>true</preserveFixedJoint></gazebo>
+  <gazebo reference="rcs_y_positive_mount"><preserveFixedJoint>true</preserveFixedJoint></gazebo>
+  <gazebo reference="rcs_y_negative_mount"><preserveFixedJoint>true</preserveFixedJoint></gazebo>
 
   <gazebo>
     <plugin filename="gz-sim-odometry-publisher-system" name="gz::sim::systems::OdometryPublisher"><dimensions>3</dimensions><odom_publish_frequency>100</odom_publish_frequency></plugin>
@@ -179,7 +179,6 @@
     <plugin filename="gz-sim-spacecraft-thruster-model-system" name="gz::sim::systems::SpacecraftThrusterModel"><link_name>rcs_x_negative_thruster</link_name><actuator_number>3</actuator_number><duty_cycle_frequency>20</duty_cycle_frequency><max_thrust>1.0</max_thrust><sub_topic>command/duty_cycle</sub_topic></plugin>
     <plugin filename="gz-sim-spacecraft-thruster-model-system" name="gz::sim::systems::SpacecraftThrusterModel"><link_name>rcs_y_positive_thruster</link_name><actuator_number>4</actuator_number><duty_cycle_frequency>20</duty_cycle_frequency><max_thrust>1.0</max_thrust><sub_topic>command/duty_cycle</sub_topic></plugin>
     <plugin filename="gz-sim-spacecraft-thruster-model-system" name="gz::sim::systems::SpacecraftThrusterModel"><link_name>rcs_y_negative_thruster</link_name><actuator_number>5</actuator_number><duty_cycle_frequency>20</duty_cycle_frequency><max_thrust>1.0</max_thrust><sub_topic>command/duty_cycle</sub_topic></plugin>
-    <plugin filename="librcs_plume_system.so" name="spacecraft_reaction_sim::RcsPlumeSystem"/>
     <plugin filename="libgz_ros2_control-system.so" name="gz_ros2_control::GazeboSimROS2ControlPlugin"><parameters>$(arg controllers_file)</parameters><hold_joints>false</hold_joints></plugin>
   </gazebo>
 </robot>

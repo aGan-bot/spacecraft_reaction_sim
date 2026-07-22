@@ -1,12 +1,12 @@
 """Launch a free-floating six-axis geometric arm for manual effort control."""
 
 from launch import LaunchDescription
-from launch.actions import IncludeLaunchDescription, SetEnvironmentVariable, TimerAction
+from launch.actions import IncludeLaunchDescription, TimerAction
 from launch.launch_description_sources import PythonLaunchDescriptionSource
-from launch.substitutions import Command, EnvironmentVariable, PathJoinSubstitution
+from launch.substitutions import Command, PathJoinSubstitution
 from launch_ros.actions import Node
 from launch_ros.parameter_descriptions import ParameterValue
-from launch_ros.substitutions import FindPackagePrefix, FindPackageShare
+from launch_ros.substitutions import FindPackageShare
 
 
 def generate_launch_description():
@@ -54,10 +54,7 @@ def generate_launch_description():
         arguments=['reaction_wheel_effort_controller', '-c', '/controller_manager'],
         output='screen')
 
-    plugin_path = PathJoinSubstitution([FindPackagePrefix('spacecraft_reaction_sim'), 'lib'])
     return LaunchDescription([
-        SetEnvironmentVariable('GZ_SIM_SYSTEM_PLUGIN_PATH', [
-            EnvironmentVariable('GZ_SIM_SYSTEM_PLUGIN_PATH', default_value=''), ':', plugin_path]),
         gazebo,
         robot_state_publisher,
         clock_bridge,
